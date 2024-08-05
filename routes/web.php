@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoleController;
@@ -33,6 +34,11 @@ Route::middleware('auth')->group(function () {
     Route::resource('roles', RoleController::class);
     Route::resource('users', UserController::class);
     Route::resource('products', ProductController::class);
+    Route::resource('attendances', AttendanceController::class);
+    Route::get('attendances/report/{id}', [AttendanceController::class, 'report'])->name('attendances.report');
+    Route::get('attendances/week-report/{id}', [AttendanceController::class, 'weeklyReport'])->name('attendances.weekly.report');
+    Route::get('attendances/month-report/{id}', [AttendanceController::class, 'monthlyReport'])->name('attendances.monthly.report');
+    Route::get('attendances/year-report/{id}', [AttendanceController::class, 'yearlyReport'])->name('attendances.yearly.report');
 });
 
 require __DIR__.'/auth.php';
