@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Product\StoreProductRequest;
+use App\Http\Requests\Product\UpdateProductRequest;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -29,14 +30,9 @@ class ProductController extends Controller
         return view('products.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreProductRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'detail' => ['required', 'string'],
-        ]);
-
-        Product::create($validated);
+        Product::create($request->validated());
 
         return redirect()
             ->route('products.index')
@@ -53,14 +49,9 @@ class ProductController extends Controller
         return view('products.edit', compact('product'));
     }
 
-    public function update(Request $request, Product $product): RedirectResponse
+    public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'detail' => ['required', 'string'],
-        ]);
-
-        $product->update($validated);
+        $product->update($request->validated());
 
         return redirect()
             ->route('products.index')
