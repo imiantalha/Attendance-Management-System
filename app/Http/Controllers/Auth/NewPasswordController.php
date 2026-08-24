@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\NewPasswordRequest;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -14,7 +15,7 @@ use Illuminate\View\View;
 
 class NewPasswordController extends Controller
 {
-    public function create(NewPasswordRequest $request): View
+    public function create(Request $request): View
     {
         return view('auth.reset-password', ['request' => $request]);
     }
