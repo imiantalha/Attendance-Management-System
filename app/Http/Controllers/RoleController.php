@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Role\StoreRoleRequest;
+use App\Http\Requests\Role\UpdateRoleRequest;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -34,15 +34,14 @@ class RoleController extends Controller
         return view('roles.create', compact('permission'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreRoleRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:roles,name'],
-            'permission' => ['required', 'array', 'min:1'],
-            'permission.*' => ['integer', 'exists:permissions,id'],
-        ]);
+        $validated = $request->validated();
 
-        $role = Role::create(['name' => $validated['name'], 'guard_name' => 'web']);
+        $role = Role::create([
+            'name' => $validated['name'],
+            'guard_name' => 'web',
+        ]);
         $role->syncPermissions($validated['permission']);
 
         return redirect()
@@ -65,18 +64,9 @@ class RoleController extends Controller
         return view('roles.edit', compact('role', 'permission', 'rolePermissions'));
     }
 
-    public function update(Request $request, Role $role): RedirectResponse
+    public function update(UpdateRoleRequest $request, Role $role): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('roles', 'name')->ignore($role->id),
-            ],
-            'permission' => ['required', 'array', 'min:1'],
-            'permission.*' => ['integer', 'exists:permissions,id'],
-        ]);
+        $validated = $request->validated();
 
         $role->update(['name' => $validated['name']]);
         $role->syncPermissions($validated['permission']);
