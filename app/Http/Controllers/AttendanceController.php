@@ -7,13 +7,16 @@ use App\Http\Requests\Attendance\UpdateAttendanceRequest;
 use App\Models\Attendance;
 use App\Models\User;
 use App\Services\AttendanceReportService;
+use App\Services\AttendanceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class AttendanceController extends Controller
 {
-    public function __construct(private readonly AttendanceReportService $attendanceReportService)
-    {
+    public function __construct(
+        private readonly AttendanceService $attendanceService,
+        private readonly AttendanceReportService $attendanceReportService
+    ) {
         $this->middleware('permission:attendance-list')->only(['index', 'show']);
         $this->middleware('permission:attendance-create')->only(['create', 'store']);
         $this->middleware('permission:attendance-edit')->only(['edit', 'update']);
@@ -48,7 +51,7 @@ class AttendanceController extends Controller
         $data = $request->validated();
         $data['attendance_by'] = $request->user()->id;
 
-        Attendance::create($data);
+        $this->attendanceService->create($data);
 
         return redirect()
             ->route('attendances.index')
@@ -71,7 +74,7 @@ class AttendanceController extends Controller
 
     public function update(UpdateAttendanceRequest $request, Attendance $attendance): RedirectResponse
     {
-        $attendance->update($request->validated());
+        $this->attendanceService->update($attendance, $request->validated());
 
         return redirect()
             ->route('attendances.index')
@@ -80,7 +83,7 @@ class AttendanceController extends Controller
 
     public function destroy(Attendance $attendance): RedirectResponse
     {
-        $attendance->delete();
+        $this->attendanceService->delete($attendance);
 
         return redirect()
             ->route('attendances.index')
