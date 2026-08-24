@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\User\StoreUserRequest;
+use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
 
@@ -34,16 +34,9 @@ class UserController extends Controller
         return view('users.create', compact('roles'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreUserRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'same:confirm-password', Password::defaults()],
-            'confirm-password' => ['required'],
-            'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => ['string', 'exists:roles,name'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
             'name' => $validated['name'],
@@ -73,18 +66,11 @@ class UserController extends Controller
         return view('users.edit', compact('user', 'roles', 'userRole'));
     }
 
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'password' => ['nullable', 'same:confirm-password', Password::defaults()],
-            'confirm-password' => ['nullable'],
-            'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => ['string', 'exists:roles,name'],
-        ]);
+        $validated = $request->validated();
 
-        if ($user->is(auth()->user()) && $user->hasRole('Admin') && !in_array('Admin', $validated['roles'], true)) {
+        if ($user->is(auth()->user()) && $user->hasRole('Admin') && ! in_array('Admin', $validated['roles'], true)) {
             return redirect()
                 ->back()
                 ->withInput()
@@ -94,7 +80,7 @@ class UserController extends Controller
         $user->name = $validated['name'];
         $user->email = $validated['email'];
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
         }
 
