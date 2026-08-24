@@ -84,6 +84,13 @@ class UserController extends Controller
             'roles.*' => ['string', 'exists:roles,name'],
         ]);
 
+        if ($user->is(auth()->user()) && $user->hasRole('Admin') && !in_array('Admin', $validated['roles'], true)) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'You cannot remove the Admin role from your own account.');
+        }
+
         $user->name = $validated['name'];
         $user->email = $validated['email'];
 
@@ -105,6 +112,12 @@ class UserController extends Controller
             return redirect()
                 ->route('users.index')
                 ->with('error', 'You cannot delete your own account.');
+        }
+
+        if ($user->hasRole('Admin') && User::role('Admin')->count() <= 1) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', 'The last Admin account cannot be deleted.');
         }
 
         $user->delete();
