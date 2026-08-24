@@ -6,15 +6,17 @@ use App\Http\Requests\Attendance\StoreAttendanceRequest;
 use App\Http\Requests\Attendance\UpdateAttendanceRequest;
 use App\Models\Attendance;
 use App\Models\User;
+use App\Services\AttendanceReportService;
 use App\Services\AttendanceService;
-use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class AttendanceController extends Controller
 {
-    public function __construct(private readonly AttendanceService $attendanceService)
-    {
+    public function __construct(
+        private readonly AttendanceService $attendanceService,
+        private readonly AttendanceReportService $attendanceReportService
+    ) {
         $this->middleware('permission:attendance-list')->only(['index', 'show']);
         $this->middleware('permission:attendance-create')->only(['create', 'store']);
         $this->middleware('permission:attendance-edit')->only(['edit', 'update']);
@@ -90,56 +92,40 @@ class AttendanceController extends Controller
 
     public function report(User $user): View
     {
-        $attendances = Attendance::with(['user', 'attendedBy'])
-            ->where('user_id', $user->id)
-            ->orderByDesc('attendance_date')
-            ->get();
+        $report = $this->attendanceReportService->forUser($user);
 
-        $workingMinutes = $attendances->mapWithKeys(
-            fn (Attendance $attendance) => [
-                $attendance->id => $this->attendanceService->calculateWorkingMinutes($attendance),
-            ]
-        );
-
-        return view('attendances.report', compact('attendances', 'user', 'workingMinutes'));
+        return view('attendances.report', [
+            'attendances' => $report['attendances'],
+            'user' => $user,
+            'workingMinutes' => $report['workingMinutes'],
+        ]);
     }
 
     public function weeklyReport(User $user): View
     {
-        return $this->periodReport($user, Carbon::now()->startOfWeek(), Carbon::now()->endOfDay());
+        return $this->periodReport($user, 'week');
     }
 
     public function monthlyReport(User $user): View
     {
-        return $this->periodReport($user, Carbon::now()->startOfMonth(), Carbon::now()->endOfDay());
+        return $this->periodReport($user, 'month');
     }
 
     public function yearlyReport(User $user): View
     {
-        return $this->periodReport($user, Carbon::now()->startOfYear(), Carbon::now()->endOfDay());
+        return $this->periodReport($user, 'year');
     }
 
-    private function periodReport(User $user, Carbon $start, Carbon $end): View
+    private function periodReport(User $user, string $period): View
     {
-        $attendances = Attendance::with(['user', 'attendedBy'])
-            ->where('user_id', $user->id)
-            ->whereBetween('attendance_date', [$start->toDateString(), $end->toDateString()])
-            ->orderByDesc('attendance_date')
-            ->get();
+        $dates = $this->attendanceReportService->period($period);
+        $report = $this->attendanceReportService->forUser($user, $dates['start'], $dates['end']);
 
-        $workingMinutes = $attendances->mapWithKeys(
-            fn (Attendance $attendance) => [
-                $attendance->id => $this->attendanceService->calculateWorkingMinutes($attendance),
-            ]
-        );
-
-        $totalWorkingMinutes = $workingMinutes->sum();
-
-        return view('attendances.week-report', compact(
-            'attendances',
-            'totalWorkingMinutes',
-            'workingMinutes',
-            'user'
-        ));
+        return view('attendances.week-report', [
+            'attendances' => $report['attendances'],
+            'totalWorkingMinutes' => $report['totalWorkingMinutes'],
+            'workingMinutes' => $report['workingMinutes'],
+            'user' => $user,
+        ]);
     }
 }
