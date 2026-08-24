@@ -4,61 +4,53 @@
 <div class="row">
     <div class="col-lg-12 margin-tb mb-4">
         <div class="pull-left">
-            <h2>User's Total Time
-                <div class="float-end">
-                    @if ($attendances->isNotEmpty())
-                    @php
-                    $userId = $attendances->first()->user->id;
-                    @endphp
-                    <a class="btn btn-primary" href="{{ route('attendances.report', $userId) }}"> Back</a>
-                    @else
-                    <a class="btn btn-primary" href="{{ route('attendances.index') }}"> Back</a>
-                    @endif
-                </div>
-            </h2>
+            <h2>Attendance Summary</h2>
+        </div>
+        <div class="float-end">
+            <a class="btn btn-primary" href="{{ route('attendances.report', $user) }}">Back</a>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-lg-12 margin-tb mb-4">
-        <h3>Total Working Time: 
-            @php
-            $totalHoursOfWork = floor($totalWorkingMinutes / 60);
+<div class="row mb-4">
+    <div class="col-lg-12">
+        @php
+            $totalHoursOfWork = intdiv($totalWorkingMinutes, 60);
             $remainingMinutesOfWork = $totalWorkingMinutes % 60;
-            @endphp
-            <strong>{{ str_pad($totalHoursOfWork, 2, '0', STR_PAD_LEFT) }}:{{ str_pad($remainingMinutesOfWork, 2, '0', STR_PAD_LEFT) }}</strong>
+        @endphp
+        <h3>Total Working Time:
+            <strong>{{ sprintf('%02d:%02d', $totalHoursOfWork, $remainingMinutesOfWork) }}</strong>
         </h3>
     </div>
 </div>
 
-<table class="table table-striped table-hover">
-    <tr>
-        <th>User Name</th>
-        <th>Date</th>
-        <th>Start Time</th>
-        <th>End Time</th>
-        <th>Time Spent</th>
-    </tr>
+<div class="table-responsive">
+<table class="table table-striped table-hover align-middle">
+    <thead>
+        <tr>
+            <th>User Name</th>
+            <th>Date</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Time Spent</th>
+        </tr>
+    </thead>
+    <tbody>
     @foreach ($attendances as $attendance)
-    <tr>
-        <td>{{ $attendance->user->name }}</td>
-        <td>{{ $attendance->attendance_date }}</td>
-        <td>{{ $attendance->start_time }}</td>
-        <td>{{ $attendance->end_time }}</td>
         @php
-        $startTime = \Carbon\Carbon::parse($attendance->start_time);
-        $endTime = \Carbon\Carbon::parse($attendance->end_time);
-        if ($endTime->format('H:i') == '00:00') {
-            $endTime->addDay();
-        }
-        $oneDayMinutes = $startTime->diffInMinutes($endTime); 
-        $hours = floor($oneDayMinutes / 60);
-        $minutes = $oneDayMinutes % 60;
+            $minutes = $workingMinutes[$attendance->id] ?? 0;
+            $hours = intdiv($minutes, 60);
+            $remainingMinutes = $minutes % 60;
         @endphp
-        <td>{{ str_pad($hours, 2, '0', STR_PAD_LEFT) }}:{{ str_pad($minutes, 2, '0', STR_PAD_LEFT) }}</td>
-    </tr>
+        <tr>
+            <td>{{ $attendance->user->name }}</td>
+            <td>{{ $attendance->attendance_date->format('Y-m-d') }}</td>
+            <td>{{ \Carbon\Carbon::parse($attendance->start_time)->format('h:i A') }}</td>
+            <td>{{ $attendance->end_time ? \Carbon\Carbon::parse($attendance->end_time)->format('h:i A') : '—' }}</td>
+            <td>{{ sprintf('%02d:%02d', $hours, $remainingMinutes) }}</td>
+        </tr>
     @endforeach
+    </tbody>
 </table>
-
+</div>
 @endsection
