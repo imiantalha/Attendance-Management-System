@@ -48,7 +48,7 @@ class AttendanceController extends Controller
         $data = $request->validated();
         $data['attendance_by'] = $request->user()->id;
 
-        $attendance = Attendance::create($data);
+        $attendance = $this->attendanceService->create($data);
         $attendance->load(['user', 'attendedBy']);
 
         return new AttendanceResource($this->withDuration($attendance));
@@ -56,7 +56,7 @@ class AttendanceController extends Controller
 
     public function update(UpdateAttendanceRequest $request, Attendance $attendance): AttendanceResource
     {
-        $attendance->update($request->validated());
+        $attendance = $this->attendanceService->update($attendance, $request->validated());
         $attendance->load(['user', 'attendedBy']);
 
         return new AttendanceResource($this->withDuration($attendance));
@@ -64,7 +64,7 @@ class AttendanceController extends Controller
 
     public function destroy(Attendance $attendance): JsonResponse
     {
-        $attendance->delete();
+        $this->attendanceService->delete($attendance);
 
         return response()->json([
             'message' => 'Attendance deleted successfully.',
