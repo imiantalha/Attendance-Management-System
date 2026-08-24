@@ -1,103 +1,112 @@
 <?php
 
 namespace App\Http\Controllers;
-    
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+
 use App\Models\User;
-use Spatie\Permission\Models\Role;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\View\View;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-   
-    public function index(Request $request)
+    public function __construct()
     {
-        $data = User::latest()->paginate(5);
-        return view('users.index',compact('data'));
+        $this->middleware('permission:user-list')->only(['index', 'show']);
+        $this->middleware('permission:user-create')->only(['create', 'store']);
+        $this->middleware('permission:user-edit')->only(['edit', 'update']);
+        $this->middleware('permission:user-delete')->only(['destroy']);
     }
 
-    public function create()
+    public function index(): View
     {
-        $roles = Role::pluck('name','name')->all();
-        return view('users.create',compact('roles'));
+        $data = User::with('roles')->latest()->paginate(10);
+
+        return view('users.index', compact('data'));
     }
 
-    public function store(Request $request)
+    public function create(): View
     {
-        $this->validate($request, [
-            'name' => 'required',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|same:confirm-password',
-            'roles' => 'required'
+        $roles = Role::orderBy('name')->pluck('name', 'name')->all();
+
+        return view('users.create', compact('roles'));
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+            'roles' => ['required', 'string', 'exists:roles,name'],
         ]);
-    
-        $input = $request->all();
-        $input['password'] = Hash::make($input['password']);
-    
-        $user = User::create($input);
-        $user->assignRole($request->input('roles'));
-    
-        return redirect()->route('users.index')
-                        ->with('success','User created successfully');
-    }
-    
-    public function show($id)
-    {
-        // dd("yes show");
-        $user = User::find($id);
-        return view('users.show',compact('user'));
-    }
-    
-    public function edit($id)
-    {
-        $user = User::find($id);
-        $roles = Role::pluck('name','name')->all();
-        $userRole = $user->roles->pluck('name','name')->all();
-    
-        return view('users.edit',compact('user','roles','userRole'));
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        $user->assignRole($validated['roles']);
+
+        return redirect()
+            ->route('users.index')
+            ->with('success', 'User created successfully.');
     }
 
-    public function update(Request $request, $id)
+    public function show(User $user): View
     {
-        // dd("yes not workding");
-        $this->validate($request, [
-            'name' => 'required',
-            'email' => 'required|email|unique:users,email,'.$id,
-            'password' => 'same:confirm-password',
-            'roles' => 'required'
+        $user->load('roles');
+
+        return view('users.show', compact('user'));
+    }
+
+    public function edit(User $user): View
+    {
+        $roles = Role::orderBy('name')->pluck('name', 'name')->all();
+        $userRole = $user->roles->pluck('name', 'name')->all();
+
+        return view('users.edit', compact('user', 'roles', 'userRole'));
+    }
+
+    public function update(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'password' => ['nullable', 'confirmed', Password::defaults()],
+            'roles' => ['required', 'string', 'exists:roles,name'],
         ]);
-    
-        $input = $request->all();
-        if(!empty($input['password'])){ 
-            $input['password'] = Hash::make($input['password']);
-        }else{
-            $input = Arr::except($input,array('password'));    
+
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+
+        if (!empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
         }
-    
-        $user = User::find($id);
-        $user->update($input);
-        DB::table('model_has_roles')->where('model_id',$id)->delete();
-    
-        $user->assignRole($request->input('roles'));
-    
-        return redirect()->route('users.index')
-                        ->with('success','User updated successfully');
-    }
-    
-    public function destroy($id)
-    {
-        User::find($id)->delete();
-        return redirect()->route('users.index')
-                        ->with('success','User deleted successfully');
+
+        $user->save();
+        $user->syncRoles([$validated['roles']]);
+
+        return redirect()
+            ->route('users.index')
+            ->with('success', 'User updated successfully.');
     }
 
-    public function logout(Request $request)
+    public function destroy(User $user): RedirectResponse
     {
-        $user = Auth::user();
-        dd($user->name);
+        if ($user->is(auth()->user())) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', 'You cannot delete your own account.');
+        }
+
+        $user->delete();
+
+        return redirect()
+            ->route('users.index')
+            ->with('success', 'User deleted successfully.');
     }
 }
