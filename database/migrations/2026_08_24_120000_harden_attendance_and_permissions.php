@@ -23,6 +23,25 @@ return new class extends Migration
 
     public function up(): void
     {
+        if (Schema::hasTable('attendances')) {
+            $duplicates = DB::table('attendances')
+                ->select('user_id', 'attendance_date')
+                ->groupBy('user_id', 'attendance_date')
+                ->havingRaw('COUNT(*) > 1')
+                ->exists();
+
+            if ($duplicates) {
+                throw new \RuntimeException(
+                    'Cannot add the attendance uniqueness constraint because duplicate employee/date records exist. Resolve duplicate attendance records first, then run migrations again.'
+                );
+            }
+
+            Schema::table('attendances', function (Blueprint $table) {
+                $table->unique(['user_id', 'attendance_date'], 'attendances_user_date_unique');
+                $table->index('attendance_date', 'attendances_date_index');
+            });
+        }
+
         foreach ($this->permissions as $permission) {
             Permission::findOrCreate($permission, 'web');
         }
@@ -33,27 +52,6 @@ return new class extends Migration
         if ($adminRole) {
             $adminRole->givePermissionTo($this->permissions);
         }
-
-        if (!Schema::hasTable('attendances')) {
-            return;
-        }
-
-        $duplicates = DB::table('attendances')
-            ->select('user_id', 'attendance_date')
-            ->groupBy('user_id', 'attendance_date')
-            ->havingRaw('COUNT(*) > 1')
-            ->exists();
-
-        if ($duplicates) {
-            throw new RuntimeException(
-                'Cannot add the attendance uniqueness constraint because duplicate employee/date records exist. Resolve duplicate attendance records first, then run migrations again.'
-            );
-        }
-
-        Schema::table('attendances', function (Blueprint $table) {
-            $table->unique(['user_id', 'attendance_date'], 'attendances_user_date_unique');
-            $table->index('attendance_date', 'attendances_date_index');
-        });
     }
 
     public function down(): void
