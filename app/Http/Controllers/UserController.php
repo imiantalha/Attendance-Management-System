@@ -40,7 +40,8 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::defaults()],
-            'roles' => ['required', 'string', 'exists:roles,name'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['string', 'exists:roles,name'],
         ]);
 
         $user = User::create([
@@ -49,7 +50,7 @@ class UserController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        $user->assignRole($validated['roles']);
+        $user->syncRoles($validated['roles']);
 
         return redirect()
             ->route('users.index')
@@ -66,7 +67,7 @@ class UserController extends Controller
     public function edit(User $user): View
     {
         $roles = Role::orderBy('name')->pluck('name', 'name')->all();
-        $userRole = $user->roles->pluck('name', 'name')->all();
+        $userRole = $user->roles->pluck('name')->all();
 
         return view('users.edit', compact('user', 'roles', 'userRole'));
     }
@@ -77,7 +78,8 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'password' => ['nullable', 'confirmed', Password::defaults()],
-            'roles' => ['required', 'string', 'exists:roles,name'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['string', 'exists:roles,name'],
         ]);
 
         $user->name = $validated['name'];
@@ -88,7 +90,7 @@ class UserController extends Controller
         }
 
         $user->save();
-        $user->syncRoles([$validated['roles']]);
+        $user->syncRoles($validated['roles']);
 
         return redirect()
             ->route('users.index')
