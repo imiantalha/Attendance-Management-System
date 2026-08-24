@@ -7,16 +7,13 @@ use App\Http\Requests\Attendance\UpdateAttendanceRequest;
 use App\Models\Attendance;
 use App\Models\User;
 use App\Services\AttendanceReportService;
-use App\Services\AttendanceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class AttendanceController extends Controller
 {
-    public function __construct(
-        private readonly AttendanceService $attendanceService,
-        private readonly AttendanceReportService $attendanceReportService
-    ) {
+    public function __construct(private readonly AttendanceReportService $attendanceReportService)
+    {
         $this->middleware('permission:attendance-list')->only(['index', 'show']);
         $this->middleware('permission:attendance-create')->only(['create', 'store']);
         $this->middleware('permission:attendance-edit')->only(['edit', 'update']);
