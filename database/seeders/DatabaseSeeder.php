@@ -1,49 +1,52 @@
 <?php
 
 namespace Database\Seeders;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
-    private $permissions = [
+    private array $permissions = [
         'role-list',
         'role-create',
         'role-edit',
         'role-delete',
+        'user-list',
+        'user-create',
+        'user-edit',
+        'user-delete',
         'product-list',
         'product-create',
         'product-edit',
-        'product-delete'
+        'product-delete',
+        'attendance-list',
+        'attendance-create',
+        'attendance-edit',
+        'attendance-delete',
+        'attendance-report',
     ];
 
     public function run(): void
     {
-         foreach ($this->permissions as $permission) {
-            Permission::create(['name' => $permission]);
+        foreach ($this->permissions as $permission) {
+            Permission::findOrCreate($permission, 'web');
         }
 
-        // Create admin User and assign the role to him.
-        $user = User::create([
-            'name' => 'Admin',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('12345678')
-        ]);
+        $role = Role::findOrCreate('Admin', 'web');
+        $role->syncPermissions($this->permissions);
 
-        $role = Role::create(['name' => 'Admin']);
+        $user = User::firstOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Admin',
+                'password' => Hash::make('12345678'),
+            ]
+        );
 
-        $permissions = Permission::pluck('id', 'id')->all();
-
-        $role->syncPermissions($permissions);
-
-        $user->assignRole([$role->id]);
+        $user->syncRoles([$role]);
     }
 }
