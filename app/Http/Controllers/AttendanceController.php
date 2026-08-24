@@ -95,31 +95,28 @@ class AttendanceController extends Controller
             ->orderByDesc('attendance_date')
             ->get();
 
-        return view('attendances.report', compact('attendances', 'user'));
+        $workingMinutes = $attendances->mapWithKeys(
+            fn (Attendance $attendance) => [
+                $attendance->id => $this->attendanceService->calculateWorkingMinutes($attendance),
+            ]
+        );
+
+        return view('attendances.report', compact('attendances', 'user', 'workingMinutes'));
     }
 
     public function weeklyReport(User $user): View
     {
-        $start = Carbon::now()->startOfWeek();
-        $end = Carbon::now()->endOfDay();
-
-        return $this->periodReport($user, $start, $end);
+        return $this->periodReport($user, Carbon::now()->startOfWeek(), Carbon::now()->endOfDay());
     }
 
     public function monthlyReport(User $user): View
     {
-        $start = Carbon::now()->startOfMonth();
-        $end = Carbon::now()->endOfDay();
-
-        return $this->periodReport($user, $start, $end);
+        return $this->periodReport($user, Carbon::now()->startOfMonth(), Carbon::now()->endOfDay());
     }
 
     public function yearlyReport(User $user): View
     {
-        $start = Carbon::now()->startOfYear();
-        $end = Carbon::now()->endOfDay();
-
-        return $this->periodReport($user, $start, $end);
+        return $this->periodReport($user, Carbon::now()->startOfYear(), Carbon::now()->endOfDay());
     }
 
     private function periodReport(User $user, Carbon $start, Carbon $end): View
@@ -130,14 +127,19 @@ class AttendanceController extends Controller
             ->orderByDesc('attendance_date')
             ->get();
 
-        $totalWorkingMinutes = $attendances->sum(
-            fn (Attendance $attendance) => $this->attendanceService->calculateWorkingMinutes($attendance)
+        $workingMinutes = $attendances->mapWithKeys(
+            fn (Attendance $attendance) => [
+                $attendance->id => $this->attendanceService->calculateWorkingMinutes($attendance),
+            ]
         );
 
-        return view('attendances.week-report', [
-            'attendances' => $attendances,
-            'totalWorkingMinutes' => $totalWorkingMinutes,
-            'user' => $user,
-        ]);
+        $totalWorkingMinutes = $workingMinutes->sum();
+
+        return view('attendances.week-report', compact(
+            'attendances',
+            'totalWorkingMinutes',
+            'workingMinutes',
+            'user'
+        ));
     }
 }
