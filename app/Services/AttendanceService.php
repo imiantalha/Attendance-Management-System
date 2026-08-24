@@ -7,6 +7,29 @@ use Carbon\Carbon;
 
 class AttendanceService
 {
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function create(array $data): Attendance
+    {
+        return Attendance::create($data);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function update(Attendance $attendance, array $data): Attendance
+    {
+        $attendance->update($data);
+
+        return $attendance->refresh();
+    }
+
+    public function delete(Attendance $attendance): void
+    {
+        $attendance->delete();
+    }
+
     public function calculateWorkingMinutes(Attendance $attendance): int
     {
         if (!$attendance->start_time || !$attendance->end_time) {
