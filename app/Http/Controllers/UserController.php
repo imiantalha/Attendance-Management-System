@@ -12,16 +12,10 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('permission:user-list')->only(['index', 'show']);
-        $this->middleware('permission:user-create')->only(['create', 'store']);
-        $this->middleware('permission:user-edit')->only(['edit', 'update']);
-        $this->middleware('permission:user-delete')->only(['destroy']);
-    }
-
     public function index(): View
     {
+        $this->authorize('viewAny', User::class);
+
         $data = User::with('roles')->latest()->paginate(10);
 
         return view('users.index', compact('data'));
@@ -29,6 +23,8 @@ class UserController extends Controller
 
     public function create(): View
     {
+        $this->authorize('create', User::class);
+
         $roles = Role::orderBy('name')->pluck('name', 'name')->all();
 
         return view('users.create', compact('roles'));
@@ -36,6 +32,8 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
+        $this->authorize('create', User::class);
+
         $validated = $request->validated();
 
         $user = User::create([
@@ -53,6 +51,8 @@ class UserController extends Controller
 
     public function show(User $user): View
     {
+        $this->authorize('view', $user);
+
         $user->load('roles');
 
         return view('users.show', compact('user'));
@@ -60,6 +60,8 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
+        $this->authorize('update', $user);
+
         $roles = Role::orderBy('name')->pluck('name', 'name')->all();
         $userRole = $user->roles->pluck('name')->all();
 
@@ -68,6 +70,8 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
+        $this->authorize('update', $user);
+
         $validated = $request->validated();
 
         if ($user->is(auth()->user()) && $user->hasRole('Admin') && ! in_array('Admin', $validated['roles'], true)) {
@@ -94,6 +98,8 @@ class UserController extends Controller
 
     public function destroy(User $user): RedirectResponse
     {
+        $this->authorize('delete', $user);
+
         if ($user->is(auth()->user())) {
             return redirect()
                 ->route('users.index')
