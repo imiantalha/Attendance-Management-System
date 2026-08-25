@@ -84,8 +84,8 @@ The current dependency baseline is Laravel 10. Before upgrading Laravel or PHP, 
 ## Local setup
 
 ```bash
-git clone https://github.com/imiantalha/Attendance-Management-System.git
-cd Attendance-Management-System
+git clone https://github.com/imiantalha/attendance-management-system.git
+cd attendance-management-system
 
 composer install
 cp .env.example .env
