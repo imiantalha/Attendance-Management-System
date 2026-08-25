@@ -12,16 +12,10 @@ use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('permission:role-list')->only(['index', 'show']);
-        $this->middleware('permission:role-create')->only(['create', 'store']);
-        $this->middleware('permission:role-edit')->only(['edit', 'update']);
-        $this->middleware('permission:role-delete')->only(['destroy']);
-    }
-
     public function index(): View
     {
+        $this->authorize('viewAny', Role::class);
+
         $roles = Role::withCount('users')->orderByDesc('id')->paginate(10);
 
         return view('roles.index', compact('roles'));
@@ -29,6 +23,8 @@ class RoleController extends Controller
 
     public function create(): View
     {
+        $this->authorize('create', Role::class);
+
         $permission = Permission::orderBy('name')->get();
 
         return view('roles.create', compact('permission'));
@@ -36,6 +32,8 @@ class RoleController extends Controller
 
     public function store(StoreRoleRequest $request): RedirectResponse
     {
+        $this->authorize('create', Role::class);
+
         $validated = $request->validated();
 
         $role = Role::create([
@@ -51,6 +49,8 @@ class RoleController extends Controller
 
     public function show(Role $role): View
     {
+        $this->authorize('view', $role);
+
         $rolePermissions = $role->permissions()->orderBy('name')->get();
 
         return view('roles.show', compact('role', 'rolePermissions'));
@@ -58,6 +58,8 @@ class RoleController extends Controller
 
     public function edit(Role $role): View
     {
+        $this->authorize('update', $role);
+
         $permission = Permission::orderBy('name')->get();
         $rolePermissions = $role->permissions->pluck('id')->all();
 
@@ -66,6 +68,8 @@ class RoleController extends Controller
 
     public function update(UpdateRoleRequest $request, Role $role): RedirectResponse
     {
+        $this->authorize('update', $role);
+
         $validated = $request->validated();
 
         $role->update(['name' => $validated['name']]);
@@ -78,6 +82,8 @@ class RoleController extends Controller
 
     public function destroy(Role $role): RedirectResponse
     {
+        $this->authorize('delete', $role);
+
         if ($role->name === 'Admin') {
             return redirect()
                 ->route('roles.index')
