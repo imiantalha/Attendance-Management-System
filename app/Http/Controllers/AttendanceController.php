@@ -31,13 +31,16 @@ class AttendanceController extends Controller
 
     public function index(): View
     {
-        $attendances = Attendance::with(['user:id,name', 'attendedBy:id,name'])
+        $attendances = Attendance::with(['user:id,name,email', 'attendedBy:id,name'])
             ->latest('attendance_date')
             ->latest('id')
             ->paginate(10);
 
         $attendances->getCollection()->transform(function (Attendance $attendance): Attendance {
             $attendance->working_minutes = $this->attendanceService->calculateWorkingMinutes($attendance);
+            $attendance->working_duration = $attendance->working_minutes > 0
+                ? $this->attendanceService->formatMinutes($attendance->working_minutes)
+                : null;
             $attendance->status = $attendance->end_time ? 'Completed' : 'Working';
 
             return $attendance;
