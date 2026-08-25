@@ -1,66 +1,181 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Attendance Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A production-oriented attendance management application built with Laravel, Blade, Bootstrap, Sanctum, and Spatie Laravel Permission.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Authentication and password recovery
+- Role and permission management
+- Employee management
+- Attendance create, update, view, and delete workflows
+- Attendance duration calculations, including overnight shifts
+- Weekly, monthly, and yearly attendance reporting
+- Dashboard attendance metrics
+- Policy- and permission-based authorization
+- FormRequest-based validation
+- Service-layer business logic
+- API v1 endpoints with Laravel API Resources
+- Responsive management UI
+- Automated tests and GitHub Actions CI
+- Production health check at `/up`
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Architecture
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+The application keeps web and API responsibilities separate:
 
-## Learning Laravel
+```text
+Web/API Request
+      |
+      v
+FormRequest
+      |
+      v
+Controller
+      |
+      v
+Service
+      |
+      v
+Model / Query
+      |
+      +----> Blade View (Web)
+      |
+      +----> API Resource (JSON API)
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Key directories
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```text
+app/
+├── Http/
+│   ├── Controllers/
+│   │   └── Api/V1/
+│   ├── Requests/
+│   └── Resources/
+├── Models/
+├── Policies/
+└── Services/
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+database/
+├── factories/
+├── migrations/
+└── seeders/
 
-## Laravel Sponsors
+tests/
+├── Feature/
+└── Unit/
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+resources/views/
+├── attendances/
+├── users/
+├── roles/
+└── dashboard.blade.php
+```
 
-### Premium Partners
+## Requirements
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+- PHP 8.1+
+- Composer 2+
+- Node.js and npm
+- MySQL, MariaDB, PostgreSQL, or another Laravel-supported database
 
-## Contributing
+The current dependency baseline is Laravel 10. Before upgrading Laravel or PHP, review dependency compatibility and run the full regression suite.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Local setup
 
-## Code of Conduct
+```bash
+git clone https://github.com/imiantalha/Attendance-Management-System.git
+cd Attendance-Management-System
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+composer install
+cp .env.example .env
+php artisan key:generate
 
-## Security Vulnerabilities
+# Configure DB_* values in .env first
+php artisan migrate --seed
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+npm install
+npm run build
+
+php artisan serve
+```
+
+Open the application at the URL shown by `php artisan serve`.
+
+## Testing
+
+Run the full suite with:
+
+```bash
+php artisan test
+```
+
+Run formatting checks with:
+
+```bash
+./vendor/bin/pint --test
+```
+
+Check dependencies for known vulnerabilities with:
+
+```bash
+composer audit
+```
+
+GitHub Actions runs the project's quality checks for pull requests targeting `main`.
+
+## API
+
+API endpoints are versioned under `/api/v1` and protected with Sanctum where authentication is required.
+
+Example endpoints include:
+
+```text
+GET    /api/v1/me
+GET    /api/v1/users
+GET    /api/v1/users/{user}
+GET    /api/v1/attendances
+GET    /api/v1/attendances/{attendance}
+POST   /api/v1/attendances
+PUT    /api/v1/attendances/{attendance}
+PATCH  /api/v1/attendances/{attendance}
+DELETE /api/v1/attendances/{attendance}
+```
+
+API responses use dedicated Laravel API Resources instead of exposing Eloquent models directly.
+
+## Production deployment
+
+For production, set `APP_ENV=production`, `APP_DEBUG=false`, use HTTPS, keep secrets outside source control, and configure persistent database/cache/session/queue infrastructure.
+
+Recommended deployment commands:
+
+```bash
+composer install --no-dev --prefer-dist --optimize-autoloader
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+Verify the health endpoint after deployment:
+
+```text
+GET /up
+```
+
+See [`docs/production-readiness.md`](docs/production-readiness.md) for the complete deployment, security, CI, backup, and post-deployment checklist.
+
+## Environment files
+
+- `.env.example` — local/development configuration template.
+- `.env.production.example` — production configuration reference. Never commit real credentials.
+
+## Security
+
+If you discover a security issue, do not publish credentials, tokens, or exploit details in a public issue. Report the issue privately to the repository owner/maintainer.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is open-sourced under the MIT License unless otherwise stated by the repository owner.
