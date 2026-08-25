@@ -1,209 +1,131 @@
 <?php
 
 namespace App\Http\Controllers;
+
+use App\Http\Requests\Attendance\StoreAttendanceRequest;
+use App\Http\Requests\Attendance\UpdateAttendanceRequest;
 use App\Models\Attendance;
 use App\Models\User;
-use Carbon\Carbon;
-
-use Illuminate\Http\Request;
+use App\Services\AttendanceReportService;
+use App\Services\AttendanceService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class AttendanceController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {   
-        $attendances = Attendance::with(['user','attendedBy'])->latest()->paginate(5);
+    public function __construct(
+        private readonly AttendanceService $attendanceService,
+        private readonly AttendanceReportService $attendanceReportService
+    ) {
+        $this->middleware('permission:attendance-list')->only(['index', 'show']);
+        $this->middleware('permission:attendance-create')->only(['create', 'store']);
+        $this->middleware('permission:attendance-edit')->only(['edit', 'update']);
+        $this->middleware('permission:attendance-delete')->only(['destroy']);
+        $this->middleware('permission:attendance-report')->only([
+            'report',
+            'weeklyReport',
+            'monthlyReport',
+            'yearlyReport',
+        ]);
+    }
+
+    public function index(): View
+    {
+        $attendances = Attendance::with(['user', 'attendedBy'])
+            ->latest('attendance_date')
+            ->latest('id')
+            ->paginate(10);
+
         return view('attendances.index', compact('attendances'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function create(): View
     {
-        $users = User::get();
+        $users = User::orderBy('name')->get(['id', 'name', 'email']);
+
         return view('attendances.create', compact('users'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function store(StoreAttendanceRequest $request): RedirectResponse
     {
-        $request->validate([
-            'start_time' => 'required|date_format:H:i',
-            'end_time'=> 'nullable|date_format:H:i',
-            // 'attendance_date' => 'required|date_format:d-m-Y',
-            'user_id' => 'required|exists:users,id',
-            'attendance_by' => 'required|exists:users,id',
-        ]);
+        $data = $request->validated();
+        $data['attendance_by'] = $request->user()->id;
 
-        // dd($request->all);
+        $this->attendanceService->create($data);
 
-        Attendance::create($request->all());
-
-        return redirect()->route('attendances.index')
-                ->with('success', 'Attendance created Successfully.');
+        return redirect()
+            ->route('attendances.index')
+            ->with('success', 'Attendance created successfully.');
     }
 
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show(Attendance $attendance): View
     {
-        $attendance = Attendance::findOrFail($id);
+        $attendance->load(['user', 'attendedBy']);
+
         return view('attendances.show', compact('attendance'));
     }
 
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function edit(Attendance $attendance): View
     {
-        $users = User::get();
-        $attendance = Attendance::findOrFail($id);
+        $users = User::orderBy('name')->get(['id', 'name', 'email']);
+
         return view('attendances.edit', compact('attendance', 'users'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(UpdateAttendanceRequest $request, Attendance $attendance): RedirectResponse
     {
-        $startTime = $request->input('start_time');
-        $endTime = $request->input('end_time');
+        $this->attendanceService->update($attendance, $request->validated());
 
-        $startTime .= ':00';
-        if ($endTime) {
-            $endTime .= ':00';
-        }
+        return redirect()
+            ->route('attendances.index')
+            ->with('success', 'Attendance updated successfully.');
+    }
 
-        // Validate the modified input
-        $request->validate([
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i',
-            // 'attendance_date' => 'required|date_format:d-m-Y',
-            'user_id' => 'required|exists:users,id',
-            'attendance_by' => 'required|exists:users,id',
+    public function destroy(Attendance $attendance): RedirectResponse
+    {
+        $this->attendanceService->delete($attendance);
+
+        return redirect()
+            ->route('attendances.index')
+            ->with('success', 'Attendance deleted successfully.');
+    }
+
+    public function report(User $user): View
+    {
+        $report = $this->attendanceReportService->forUser($user);
+
+        return view('attendances.report', [
+            'attendances' => $report['attendances'],
+            'user' => $user,
+            'workingMinutes' => $report['workingMinutes'],
         ]);
+    }
 
-        // Find the attendance record
-        $attendance = Attendance::findOrFail($id);
+    public function weeklyReport(User $user): View
+    {
+        return $this->periodReport($user, 'week');
+    }
 
-        // Update the attendance record
-        $attendance->update([
-            'start_time' => $startTime,
-            'end_time' => $endTime,
-            'attendance_date' => $request->input('attendance_date'),
-            'user_id' => $request->input('user_id'),
-            'attendance_by' => $request->input('attendance_by'),
+    public function monthlyReport(User $user): View
+    {
+        return $this->periodReport($user, 'month');
+    }
+
+    public function yearlyReport(User $user): View
+    {
+        return $this->periodReport($user, 'year');
+    }
+
+    private function periodReport(User $user, string $period): View
+    {
+        $dates = $this->attendanceReportService->period($period);
+        $report = $this->attendanceReportService->forUser($user, $dates['start'], $dates['end']);
+
+        return view('attendances.week-report', [
+            'attendances' => $report['attendances'],
+            'totalWorkingMinutes' => $report['totalWorkingMinutes'],
+            'workingMinutes' => $report['workingMinutes'],
+            'user' => $user,
         ]);
-
-        return redirect()->route('attendances.index')
-                        ->with('success', 'Attendance updated successfully.');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        $attendance = Attendance::findOrFail($id);
-        $attendance->delete();
-    
-        return redirect()->route('attendances.index')
-                         ->with('success', 'Attendance deleted successfully.');
-    }
-    
-
-    public function report(string $id) 
-    {   
-        $attendances = Attendance::with(['user','attendedBy'])->where('user_id', $id)->get();
-        return view('attendances.report', compact('attendances'));
-    }
-
-    public function weeklyReport(string $id)
-    {
-        Carbon::setLocale('en');
-        $monday = Carbon::now()->startOfWeek()->toDateString();
-        $currentDay = Carbon::now()->toDateString();
-        
-        // dd($monday, $currentDay);
-
-        $attendances = Attendance::with(['user', 'attendedBy'])
-            ->where('user_id', $id)
-            ->whereBetween('attendance_date', [$monday, $currentDay])
-            ->get();
-
-        $totalWorkingMinutes = 0;
-    
-        foreach ($attendances as $attendance) {
-            $startTime = Carbon::parse($attendance->start_time);
-            $endTime = Carbon::parse($attendance->end_time);
-    
-            if ($endTime->format('H:i') == '00:00') {
-                $endTime->addDay();
-            }
-    
-            $oneDayMinutes = $startTime->diffInMinutes($endTime); 
-            $totalWorkingMinutes += $oneDayMinutes;
-        }
-    
-        return view('attendances.week-report', compact('attendances', 'totalWorkingMinutes'));
-    }
-
-    public function monthlyReport(string $id)
-    {
-        $firstDay = Carbon::now()->startOfMonth();
-        $currentDay = Carbon::now();
-
-        $attendances = Attendance::with(['user', 'attendedBy'])
-            ->where('user_id', $id)
-            ->whereBetween('attendance_date', [$firstDay, $currentDay])
-            ->get();
-
-        $totalWorkingMinutes = 0;
-
-        foreach ($attendances as $attendance) {
-            $startTime = Carbon::parse($attendance->start_time);
-            $endTime = Carbon::parse($attendance->end_time);
-
-            if ($endTime->format('H:i') == '00:00') {
-                $endTime->addDay();
-            }
-
-            $oneDayMinutes = $startTime->diffInMinutes($endTime); 
-            $totalWorkingMinutes += $oneDayMinutes;
-        }
-
-        return view('attendances.week-report', compact('attendances', 'totalWorkingMinutes'));
-    }
-
-    public function yearlyReport(string $id) 
-    {
-        $startOfYear = Carbon::now()->startOfYear();
-        $currentDay = Carbon::now();
-
-        $attendances = Attendance::with(['user', 'attendedBy'])
-        ->where('user_id', $id)
-        ->whereBetween('attendance_date', [$startOfYear, $currentDay])
-        ->get();
-
-        $totalWorkingMinutes = 0;
-
-        foreach($attendances as $attendance) {
-            $startTime = Carbon::parse(($attendance->start_time));
-            $endTime = Carbon::parse($attendance->end_time);
-
-            $oneDayMinutes = $startTime->diffInMinutes($endTime);
-            $totalWorkingMinutes += $oneDayMinutes;
-        }
-
-        return view('attendances.week-report', compact('attendances', 'totalWorkingMinutes'));
     }
 }
- 
