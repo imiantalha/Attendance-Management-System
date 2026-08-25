@@ -11,6 +11,7 @@ class DashboardController extends Controller
     public function __invoke(): View
     {
         $today = now()->toDateString();
+        $employeeCount = User::query()->count();
 
         $todayAttendances = Attendance::query()
             ->whereDate('attendance_date', $today)
@@ -19,10 +20,10 @@ class DashboardController extends Controller
         $presentUserIds = $todayAttendances->pluck('user_id')->unique();
 
         return view('dashboard', [
-            'employeeCount' => User::query()->count(),
+            'employeeCount' => $employeeCount,
             'presentCount' => $presentUserIds->count(),
             'workingCount' => $todayAttendances->whereNull('end_time')->pluck('user_id')->unique()->count(),
-            'absentCount' => max(0, User::query()->count() - $presentUserIds->count()),
+            'absentCount' => max(0, $employeeCount - $presentUserIds->count()),
             'todayAttendances' => $todayAttendances,
         ]);
     }
