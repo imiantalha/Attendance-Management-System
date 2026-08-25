@@ -6,11 +6,18 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/up', function () {
+    DB::connection()->getPdo();
+
+    return response()->json(['status' => 'ok']);
+})->name('health');
 
 Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])
