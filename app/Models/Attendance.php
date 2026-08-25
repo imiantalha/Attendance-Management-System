@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
 
 class Attendance extends Model
@@ -21,12 +22,12 @@ class Attendance extends Model
         'attendance_date' => 'date',
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function attendedBy()
+    public function attendedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'attendance_by');
     }
