@@ -11,18 +11,12 @@
                 </a>
 
                 <div class="hidden items-center gap-1 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        Dashboard
-                    </x-nav-link>
-                    @can('attendance-view')
-                        <x-nav-link :href="route('attendances.index')" :active="request()->routeIs('attendances.*')">
-                            Attendance
-                        </x-nav-link>
+                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">Dashboard</x-nav-link>
+                    @can('viewAny', App\Models\Attendance::class)
+                        <x-nav-link :href="route('attendances.index')" :active="request()->routeIs('attendances.*')">Attendance</x-nav-link>
                     @endcan
-                    @can('user-list')
-                        <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
-                            Employees
-                        </x-nav-link>
+                    @can('viewAny', App\Models\User::class)
+                        <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">Employees</x-nav-link>
                     @endcan
                 </div>
             </div>
@@ -66,10 +60,10 @@
     <div x-show="open" x-cloak class="border-t border-gray-100 bg-gray-50 sm:hidden">
         <div class="space-y-1 px-4 py-3">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">Dashboard</x-responsive-nav-link>
-            @can('attendance-view')
+            @can('viewAny', App\Models\Attendance::class)
                 <x-responsive-nav-link :href="route('attendances.index')" :active="request()->routeIs('attendances.*')">Attendance</x-responsive-nav-link>
             @endcan
-            @can('user-list')
+            @can('viewAny', App\Models\User::class)
                 <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">Employees</x-responsive-nav-link>
             @endcan
         </div>
