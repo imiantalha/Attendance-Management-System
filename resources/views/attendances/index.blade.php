@@ -55,13 +55,7 @@
                                     <span class="text-muted">—</span>
                                 @endif
                             </td>
-                            <td>
-                                @if($attendance->working_minutes)
-                                    {{ app(\App\Services\AttendanceService::class)->formatMinutes($attendance->working_minutes) }}
-                                @else
-                                    <span class="text-muted">—</span>
-                                @endif
-                            </td>
+                            <td>{{ $attendance->working_duration ?? '—' }}</td>
                             <td>
                                 @if($attendance->status === 'Working')
                                     <span class="badge rounded-pill text-bg-primary">Working</span>
