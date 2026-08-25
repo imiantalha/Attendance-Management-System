@@ -14,7 +14,9 @@ class DashboardController extends Controller
         $employeeCount = User::query()->count();
 
         $todayAttendances = Attendance::query()
+            ->with('user:id,name')
             ->whereDate('attendance_date', $today)
+            ->orderBy('start_time')
             ->get(['id', 'user_id', 'start_time', 'end_time', 'attendance_date']);
 
         $presentUserIds = $todayAttendances->pluck('user_id')->unique();
