@@ -1,13 +1,13 @@
-name: Tests
+name: Quality
 
 on:
   push:
-    branches: [main, 'audit/**', 'refactor/**']
+    branches: [main, 'audit/**', 'refactor/**', 'feat/**']
   pull_request:
-    branches: [main, 'audit/**', 'refactor/**']
+    branches: [main, 'audit/**', 'refactor/**', 'feat/**']
 
 jobs:
-  tests:
+  quality:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,14 +20,24 @@ jobs:
           php-version: '8.2'
           extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite
           coverage: none
+          tools: composer:v2
+
+      - name: Validate Composer configuration
+        run: composer validate --strict
 
       - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
+        run: composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
       - name: Prepare application
         run: |
           cp .env.example .env
           php artisan key:generate
 
+      - name: Run code style checks
+        run: vendor/bin/pint --test
+
       - name: Run test suite
-        run: php artisan test
+        run: php artisan test --without-tty
+
+      - name: Check for known vulnerable dependencies
+        run: composer audit --no-interaction
